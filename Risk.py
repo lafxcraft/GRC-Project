@@ -17,7 +17,6 @@ def level(r):
             else "Medium" if r >= 10 else "Low")
 
 SLA = {"Critical": 7, "High": 30, "Medium": 90, "Low": 180}
-
 df = pd.DataFrame(rows)
 df["risk"] = df["cvss"] * ASSET_CRITICALITY
 df["level"] = df["risk"].apply(level)
