@@ -1,0 +1,50 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Risk Scanner</title>
+<style>
+ body{font-family:sans-serif;max-width:1100px;margin:2em auto}
+ table{border-collapse:collapse;width:100%}
+ th,td{border:1px solid #ccc;padding:4px 8px;text-align:left}
+ th{background:#0B2545;color:#fff}
+ .Critical{background:#f8b4b4}.High{background:#fcd9b0}
+ .Medium{background:#fff3b0}.Low{background:#d6f0d6}
+</style></head><body>
+<h2>Risk Scanner</h2>
+<p><select id="kind">
+  <option value="image">Image name</option>
+  <option value="url">Zip file URL</option>
+  <option value="file">Upload .tar or .zip</option></select>
+ <input id="text" size="45" placeholder="python:3.7-slim">
+ <input id="file" type="file">
+ Criticality <select id="crit"><option>1</option><option>2</option>
+  <option>3</option><option selected>4</option><option>5</option></select>
+ <button onclick="scan()">Scan</button></p>
+<p id="msg"></p><p id="sum"></p><table id="tbl"></table>
+<script>
+const esc = s => String(s).replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";");
+async function scan() {
+  const kind = document.getElementById("kind").value;
+  const crit = document.getElementById("crit").value;
+  let opts;
+  if (kind === "file") {
+    const form = new FormData();
+    form.append("file", document.getElementById("file").files[0]);
+    form.append("criticality", crit);
+    opts = {method: "POST", body: form};
+  } else {
+    const body = {criticality: crit};
+    body[kind] = document.getElementById("text").value;
+    opts = {method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)};
+  }
+  msg.textContent = "Scanning... this can take a minute";
+  const res = await fetch("/api/scan", opts);
+  const data = await res.json();
+  if (!res.ok) { msg.textContent = data.error; return; }
+  msg.textContent = "Done: " + data.findings.length + " findings";
+  sum.textContent = JSON.stringify(data.summary);
+  const cols = ["cve","package","installed","fixed","severity","cvss","risk","level","sla_days"];
+  tbl.innerHTML = "<tr>" + cols.map(c => "<th>" + c + "</th>").join("") + "</tr>" +
+    data.findings.map(r => "<tr class='" + esc(r.level) + "'>" +
+      cols.map(c => "<td>" + esc(r[c]) + "</td>").join("") + "</tr>").join("");
+}
+</script></body></html>
